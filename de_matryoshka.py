@@ -3,11 +3,11 @@
 import inkex
 
 """
-Extension for InkScape 1.0
+Extension for InkScape 1.2
 
-Extension de-nests groups containing only one group, recursively, for selected groups/items.
+Extension de-nests groups (a group only containing one group), recursively, for selected groups/items.
 Also removes empty groups.
-A currently better alternative is to use Extensions/Arrange/Deep Ungroup...
+Currently a better alternative is to use Extensions/Arrange/Deep Ungroup...
 
 Author: Cyrille Médard de Chardon
 Mail: cyrille.mdc@gmail.com
