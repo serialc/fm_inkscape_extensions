@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+    <name>Clear selection styles</name>
+    <id>frakturmedia.net.clear_styles</id>
+    <effect needs-live-preview="false">
+        <object-type>path</object-type>
+        <effects-menu>
+            <submenu name="Frakturmedia"></submenu>
+        </effects-menu>
+    </effect>
+    <script>
+        <command location="inx" interpreter="python">clear_style.py</command>
+    </script>
+</inkscape-extension>
