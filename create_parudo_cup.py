@@ -11,7 +11,8 @@ Date: 2026-05-27
 License: GNU GPL v3
 """
 
-import math, inkex
+import math
+import inkex
 from inkex.utils import debug
 
 
@@ -32,7 +33,9 @@ class GenerateCup(inkex.EffectExtension):
     def effect(self):
         """Create the cup, base, and cap. Perforated."""
         self.calculate()
-        self.makeCup(self.options.s3, self.options.s2, self.options.theta)
+        self.makeCup(
+            "Inner cup", self.options.s3, self.options.s2, self.options.theta, False
+        )
         self.makeBase(
             "Cup base",
             (0, 100),
@@ -53,26 +56,58 @@ class GenerateCup(inkex.EffectExtension):
             self.options.holes_radii,
         )
 
+        # if user asked for second layer, calculate and generate it
+        if self.options.wrap_layer:
+
+            self.calculateWrap()
+
+            # make the second, wider base with same hole locations
+            self.makeBase(
+                "Cup base outer",
+                (0, 0),
+                self.options.r2 + self.options.mat_thickness,
+                self.options.mat_thickness,
+                self.base_holes_count,
+                self.options.holes_offset + self.options.mat_thickness,
+                self.options.holes_radii,
+            )
+            self.makeBase(
+                "Cup cap 2",
+                # + 7 make the cap a little larger than the cup
+                (3 * (self.options.r1 + 7) + self.options.r2, 100),
+                self.options.r1 + 7,
+                self.options.mat_thickness,
+                self.cap_holes_count,
+                self.options.holes_offset,
+                self.options.holes_radii,
+            )
+            self.makeCup(
+                "Outer cup",
+                self.options.wrap_s3,
+                self.options.wrap_s2,
+                self.options.wrap_theta,
+                True,
+            )
+
     def makeBase(
         self,
         group_name,
         loc,
-        bradius,
+        cradius,
         mat_thickness,
         holes_count,
         holes_offset,
         holes_radii,
     ):
-        """Makes the parudo cup base and holes."""
+        """Make the parudo cup base and holes."""
         group = inkex.Group()
         group.label = group_name
 
-        debug(f"Bradius is {bradius}")
         base = inkex.Circle()
         # locate the base under the origin
         base.center = loc
         # reduce the base radius by half of the material thickness
-        base.radius = bradius - mat_thickness / 2
+        base.radius = cradius - mat_thickness / 2
         base.style = self.base_style
 
         # Add to current layer
@@ -81,7 +116,7 @@ class GenerateCup(inkex.EffectExtension):
         # Add the holes #####################
         rad_shift = 2 * math.pi / holes_count
         # need to compensate radius for offset and material thickness
-        radalt = bradius - mat_thickness / 2 - holes_offset
+        radalt = cradius - mat_thickness / 2 - holes_offset
         for i in range(holes_count):
             # make and locate each hole
             hole = inkex.Circle()
@@ -97,10 +132,10 @@ class GenerateCup(inkex.EffectExtension):
         # add the group to the SVG layer
         self.svg.get_current_layer().add(group)
 
-    def makeCup(self, radsm, radlg, arcangle):
+    def makeCup(self, group_name, radsm, radlg, arcangle, is_wrapper):
         """Create the parudo cup."""
         group = inkex.Group()
-        group.label = "Cup shape"
+        group.label = group_name
 
         # Make the cup #####################
         radangle = arcangle / 180 * math.pi
@@ -144,8 +179,14 @@ class GenerateCup(inkex.EffectExtension):
 
         # adjust the hole distance
         radalt = radsm + self.options.holes_offset
+
+        # if this is the outer wrapper, adjust the buttom holes offset
+        if is_wrapper:
+            radalt += self.options.mat_thickness
+
         # convert the hole offset to angular
         angular_offset = math.atan(self.options.holes_offset / radalt)
+
         # determine the angular shift between holes
         rad_shift = (radangle - 2 * angular_offset) / (self.base_holes_count - 1)
 
@@ -164,7 +205,9 @@ class GenerateCup(inkex.EffectExtension):
             group.add(hole)
 
         # Add the holes climbing the edges ######################
-        radius_gap = (radlg - radsm - 2 * self.options.holes_offset) / (
+
+        # the radius distance between circles
+        radius_gap = (radlg - radalt - self.options.holes_offset) / (
             self.climb_holes_count - 1
         )
 
@@ -202,7 +245,66 @@ class GenerateCup(inkex.EffectExtension):
         pars.add_argument("--holes_offset", type=float, help="Hole offset")
         pars.add_argument("--holes_radii", type=float, help="Hole radii")
         pars.add_argument("--mat_thickness", type=float, help="Material thickness")
-        # these are then available as self.options.r1/r2/h
+        # boolean requires addition attributes:
+        # - the default vale, and
+        # - inkex.Boolean type
+        pars.add_argument(
+            "--wrap_layer",
+            type=inkex.Boolean,
+            help="Create wrapping layer",
+            default=False,
+        )
+        # these variables become available as self.options.*
+
+    def calculateWrap(self):
+        """Calculate requirements for wrapping cup."""
+        self.options.wrap = {}
+
+        # create the new top radii and height with added material thickness
+        self.options.wrap_r1 = self.options.r1 + self.options.mat_thickness
+        self.options.wrap_h = self.options.h + self.options.mat_thickness
+
+        # We don't know the bottom thickness as the design uses a deeper wrap height.
+        #
+        #  ---R1----   --A--
+        #  \\      |   |  //  /
+        #   \\     |  H| //  /
+        # S1 \\    |   |//  /
+        #     \----|---|/  /
+        #      -R2-|----  /  S2
+        #       \  |  /  /
+        #    S3  \α| /  /
+        #         \|/  /
+        #          V  /
+        #
+        # We need to do things in a different order and way than last time
+
+        # Calculate A
+        self.options.wrap_a = math.tan(self.options.halfapert) * self.options.wrap_h
+
+        # Can now determine R2
+        self.options.wrap_r2 = self.options.wrap_r1 - self.options.wrap_a
+
+        # Calculate wrap S2 using radius and half aperture
+        self.options.wrap_s2 = self.options.wrap_r1 / math.sin(self.options.halfapert)
+
+        # calculate truncated slant height (S1) in order to determine S3
+        self.options.wrap_s1 = math.sqrt(
+            math.pow(self.options.wrap_a, 2) + math.pow(self.options.wrap_h, 2)
+        )
+
+        # lower arc distance: S3
+        self.options.wrap_s3 = self.options.wrap_s2 - self.options.wrap_s1
+
+        # calculate theta: 360 * (r1 / s2) (convert from radians to degrees)
+        self.options.wrap_theta = 360 * self.options.wrap_r1 / self.options.wrap_s2
+
+        debug("\nWrap measurements are:")
+        debug(f"R1 is {self.options.wrap_r1}")
+        debug(f"R2 is {self.options.wrap_r2}")
+        debug(f"H is {self.options.wrap_h}")
+        debug(f"A is {self.options.wrap_a}")
+        debug(f"Theta {self.options.wrap_theta}")
 
     def calculate(self):
         """Calculates all the measurements based on passed parameters."""
@@ -210,7 +312,7 @@ class GenerateCup(inkex.EffectExtension):
         #  A        R1
         # ---|---|-------   /
         # \  |   |      /  /
-        #  \ |H  |H2   /  /
+        #  \ |H  |     /  /
         # S1\|   | R2 /  /
         #    ----|----  S2
         #     \  |  /  /
@@ -221,7 +323,8 @@ class GenerateCup(inkex.EffectExtension):
         # calculate radial difference (A)
         self.options.a = self.options.r1 - self.options.r2
 
-        # calculate truncated slant height (S1)
+        # calculate truncated slant height (S1) to get S3
+        # S1 serves no purpose but to calculate S3
         self.options.s1 = math.sqrt(
             math.pow(self.options.a, 2) + math.pow(self.options.h, 2)
         )
@@ -233,15 +336,19 @@ class GenerateCup(inkex.EffectExtension):
         # calculate theta: 360 * (r1 / s2) (convert from radians to degrees)
         self.options.theta = 360 * self.options.r1 / self.options.s2
 
+        # calculate the (half) aperture - we will need this to calculate the wrap, if requested
+        self.options.halfapert = math.asin(self.options.r1 / self.options.s2)
+
         # calculate theta
-        debug(self.options.r1)
-        debug(self.options.r2)
-        debug(self.options.h)
-        debug(self.options.a)
-        debug(self.options.s1)
-        debug(self.options.s2)
-        debug(self.options.s3)
-        debug(self.options.theta)
+        debug(f"R1 is {self.options.r1}")
+        debug(f"R2 is {self.options.r2}")
+        debug(f"H is {self.options.h}")
+        debug(f"A is {self.options.a}")
+        # debug(self.options.s1)
+        # debug(self.options.s2)
+        # debug(self.options.s3)
+        debug(f"Theta {self.options.theta}")
+        debug(f"Half aperture is {self.options.halfapert / math.pi * 180}")
 
 
 if __name__ == "__main__":

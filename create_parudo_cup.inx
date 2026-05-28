@@ -2,12 +2,13 @@
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
     <name>Create Parudo cup</name>
     <id>frakturmedia.net.create_parudo_cup</id>
-    <param name="r1" type="float" _gui-text="Top radius: " min="2" max="10000">32.0</parm>
-    <param name="r2" type="float" _gui-text="Bottom radius: " min="1" max="10000">22.5</parm>
-    <param name="h" type="float" _gui-text="Cup height: " min="1" max="10000">82.0</parm>
-    <param name="holes_offset" type="float" _gui-text="Holes offset: " min="0" max="10000">5.0</parm>
-    <param name="holes_radii" type="float" _gui-text="Holes radii: " min="0.1" max="10000">1.2</parm>
-    <param name="mat_thickness" type="float" _gui-text="Material thickness: " min="0" max="10000">3.0</parm>
+    <param name="r1" type="float" _gui-text="Top radius: " min="2" max="10000">32.0</param>
+    <param name="r2" type="float" _gui-text="Bottom radius: " min="1" max="10000">22.5</param>
+    <param name="h" type="float" _gui-text="Cup height: " min="1" max="10000">82.0</param>
+    <param name="holes_offset" type="float" _gui-text="Holes offset: " min="0" max="10000">5.0</param>
+    <param name="holes_radii" type="float" _gui-text="Holes radii: " min="0.1" max="10000">1.2</param>
+    <param name="mat_thickness" type="float" _gui-text="Material thickness: " min="0" max="10000">3.0</param>
+    <param name="wrap_layer" type="bool" _gui-text="Generate secondary wrap">true</param>
     <effect needs-live-preview="false">
         <object-type>all</object-type>
         <effects-menu>
