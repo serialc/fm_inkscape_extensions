@@ -8,6 +8,7 @@
     <param name="holes_offset" type="float" _gui-text="Holes offset: " min="0" max="10000">5.0</param>
     <param name="holes_radii" type="float" _gui-text="Holes radii: " min="0.1" max="10000">1.2</param>
     <param name="mat_thickness" type="float" _gui-text="Material thickness: " min="0" max="10000">3.0</param>
+    <param name="top_perf" type="bool" _gui-text="Perforate top">true</param>
     <param name="wrap_layer" type="bool" _gui-text="Generate secondary wrap">true</param>
     <effect needs-live-preview="false">
         <object-type>all</object-type>

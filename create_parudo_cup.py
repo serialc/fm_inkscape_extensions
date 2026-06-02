@@ -204,6 +204,38 @@ class GenerateCup(inkex.EffectExtension):
             # add to group
             group.add(hole)
 
+        # Add the perforations along the bottom #####################
+        # This is an option
+        if self.options.top_perf:
+
+            # hack for now, should really check distance between as hole # determinant
+            add_top_holes = 6
+
+            # adjust the hole distance
+            radout = radlg - self.options.holes_offset
+
+            # convert the hole offset to angular
+            angular_offset = math.atan(self.options.holes_offset / radout)
+
+            # determine the angular shift between holes
+            rad_shift = (radangle - 2 * angular_offset) / (
+                self.base_holes_count + add_top_holes - 1
+            )
+
+            for i in range(1, self.base_holes_count + add_top_holes - 1):
+                # locate the hole
+                cx = radout * math.cos(angular_offset - radangle / 2 + rad_shift * i)
+                cy = radout * math.sin(angular_offset - radangle / 2 + rad_shift * i)
+
+                # make hole, attributes, style
+                hole = inkex.Circle()
+                hole.center = (cx, cy)
+                hole.radius = self.options.holes_radii
+                hole.style = self.base_style
+
+                # add to group
+                group.add(hole)
+
         # Add the holes climbing the edges ######################
 
         # the radius distance between circles
@@ -248,6 +280,12 @@ class GenerateCup(inkex.EffectExtension):
         # boolean requires addition attributes:
         # - the default vale, and
         # - inkex.Boolean type
+        pars.add_argument(
+            "--top_perf",
+            type=inkex.Boolean,
+            help="Perforate top",
+            default=False,
+        )
         pars.add_argument(
             "--wrap_layer",
             type=inkex.Boolean,
